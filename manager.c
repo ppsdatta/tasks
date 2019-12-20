@@ -9,208 +9,213 @@
 
 typedef struct
 {
-  char name[MAX];
+    char name[MAX];
+    int priority;    
 } task_t;
 
 typedef struct
 {
-  size_t task_len;
-  task_t *tasks;
+    size_t task_len;
+    task_t *tasks;
 } task_list_t;
 
 int init_task_list(task_list_t *task_list)
 {
-  task_list->task_len = 0;
-  task_list->tasks = malloc(sizeof(task_t) * MAX);
+    task_list->task_len = 0;
+    task_list->tasks = malloc(sizeof(task_t) * MAX);
 
-  if (task_list->tasks == NULL) return 0;
+    if (task_list->tasks == NULL) return 0;
 
-  return 1;
+    return 1;
 }
 
-int add_task(task_list_t *task_list, const char *name)
+int add_task(task_list_t *task_list, const char *name, int priority)
 {
-  task_t *task;
+    task_t *task;
   
-  if (task_list->task_len > MAX) {
-    return 0;
-  }
+    if (task_list->task_len > MAX) {
+	return 0;
+    }
 
-  memset(task_list->tasks[task_list->task_len].name, 0, MAX);
-  strncpy(task_list->tasks[task_list->task_len].name, name, MAX - 1);
-  task_list->task_len++;
+    memset(task_list->tasks[task_list->task_len].name, 0, MAX);
+    strncpy(task_list->tasks[task_list->task_len].name, name, MAX - 1);
+    task_list->tasks[task_list->task_len].priority = priority;
+    task_list->task_len++;
 
-  return 1;
+    return 1;
 }
 
 void read_from_db(const char *dbpath, task_list_t *task_list)
 {
-  FILE *dbr = fopen(dbpath, "rb");
-  size_t reads = 0;
+    FILE *dbr = fopen(dbpath, "rb");
+    size_t reads = 0;
 
-  if (dbr == NULL) {
-    fprintf(stderr, "Could not read from db file!\n");
-    exit(EXIT_FAILURE);
-  }
+    if (dbr == NULL) {
+	fprintf(stderr, "Could not read from db file!\n");
+	exit(EXIT_FAILURE);
+    }
 
-  if (feof(dbr)) {
-    return;
-  }
+    if (feof(dbr)) {
+	return;
+    }
 
-  fscanf(dbr, "%ld", &reads);
+    fscanf(dbr, "%ld", &reads);
 
-  task_list->task_len = reads;
-  fread(task_list->tasks,
-	sizeof(task_t),
-	reads,
-	dbr);
+    task_list->task_len = reads;
+    fread(task_list->tasks,
+	  sizeof(task_t),
+	  reads,
+	  dbr);
 }
 
 void write_to_db(const char *dbpath, task_list_t *task_list)
 {
-  FILE *dbw = fopen(dbpath, "wb");
-  size_t writes;
+    FILE *dbw = fopen(dbpath, "wb");
+    size_t writes;
   
-  if (dbw == NULL) {
-    fprintf(stderr, "Could not write to db file!\n");
-    exit(EXIT_FAILURE);
-  }
+    if (dbw == NULL) {
+	fprintf(stderr, "Could not write to db file!\n");
+	exit(EXIT_FAILURE);
+    }
 
-  fprintf(dbw, "%ld", task_list->task_len);
+    fprintf(dbw, "%ld", task_list->task_len);
 
-  writes = fwrite(task_list->tasks,
-		  sizeof(task_t),
-		  task_list->task_len,
-		  dbw);
+    writes = fwrite(task_list->tasks,
+		    sizeof(task_t),
+		    task_list->task_len,
+		    dbw);
 
-  if (writes != task_list->task_len) {
-    fprintf(stderr, "Number of writes do not match number of tasks!\n");
-  }
+    if (writes != task_list->task_len) {
+	fprintf(stderr, "Number of writes do not match number of tasks!\n");
+    }
 
-  fclose(dbw);
+    fclose(dbw);
 }
 
 void debug_print_task_list(task_list_t *task_list)
 {
-  int i;
+    int i;
 
-  for (i = 0; i < task_list->task_len; i++) {
-    printf(". %s\n", task_list->tasks[i].name);
-  }
+    for (i = 0; i < task_list->task_len; i++) {
+	printf(". %s [priority = %d]\n", task_list->tasks[i].name, task_list->tasks[i].priority);
+    }
 }
 
 void free_task_list(task_list_t *task_list)
 {
-  free(task_list->tasks);
+    free(task_list->tasks);
 }
 
 const char *get_home_dir(void)
 {
-  const char *home = getenv("HOME");
+    const char *home = getenv("HOME");
 
-  if (home) return home;
+    if (home) return home;
 
-  uid_t uid = getuid();
-  struct passwd *pw = getpwuid(uid);
+    uid_t uid = getuid();
+    struct passwd *pw = getpwuid(uid);
 
-  if (pw == NULL) {
-    fprintf(stderr, "Could not get home directory, abort\n");
-    exit(EXIT_FAILURE);
-  }
+    if (pw == NULL) {
+	fprintf(stderr, "Could not get home directory, abort\n");
+	exit(EXIT_FAILURE);
+    }
 
-  return pw->pw_dir;
+    return pw->pw_dir;
 }
 
 enum COMMAND {
-  ADD = 1,
-  LIST,
-  DELETE,
-  COMPLETE
+    ADD = 1,
+    LIST,
+    DELETE,
+    COMPLETE
 };
 
 int parse_command(int argc, char **argv, char *param, size_t max)
 {
-  const char *head;
+    const char *head;
   
-  if (argc <= 1) return 0;
+    if (argc <= 1) return LIST;
 
-  memset(param, 0, max);
-  head = argv[1];
+    memset(param, 0, max);
+    head = argv[1];
   
-  if (!strcmp(head, "add") ||
-      !strcmp(head, "delete") ||
-      !strcmp(head, "complete")) {
-    int i;
-    size_t m = max - 1;
+    if (!strcmp(head, "add") ||
+	!strcmp(head, "delete") ||
+	!strcmp(head, "complete")) {
+	int i;
+	size_t m = max - 1;
     
-    for (i = 2; i < argc; i++) {
-      m = m - strlen(param);
-      strncat(param, argv[i], m);
-      m = m - 1;
-      strcat(param, " ");
+	for (i = 2; i < argc; i++) {
+	    m = m - strlen(param);
+	    strncat(param, argv[i], m);
+	    m = m - 1;
+	    strcat(param, " ");
+	}
+    
+	if (!strcmp(head, "add")) return ADD;
+	if (!strcmp(head, "delete")) return DELETE;
+	if (!strcmp(head, "complete")) return COMPLETE;
+    }
+    else if (!strcmp(head, "list") || !strcmp(head, "LIST")) {
+	return LIST;
     }
     
-    if (!strcmp(head, "add")) return ADD;
-    if (!strcmp(head, "delete")) return DELETE;
-    if (!strcmp(head, "complete")) return COMPLETE;
-  }
-  else if (!strcmp(head, "list") || !strcmp(head, "LIST")) {
-    return LIST;
-  }
-  else {
     return 0;
-  }
 }
 
 int main(int argc, char **argv)
 {
-  const char *home = get_home_dir();
-  const char *dbname = "tasks.bin";
-  char dbpath[MAX];
-  char command[MAX];
-  task_list_t task_list;
-  int op;
+    const char *home = get_home_dir();
+    const char *dbname = "tasks.bin";
+    char dbpath[MAX];
+    char command[MAX];
+    task_list_t task_list;
+    int op;
+    int priority = 5;
   
-  memset(dbpath, 0, MAX);
-  strncat(dbpath, home, (MAX - strlen(dbname) - 2));
-  strcat(dbpath, "/");
-  strcat(dbpath, dbname);
-  sprintf(command, "touch %s", dbpath);
-  system(command);
+    memset(dbpath, 0, MAX);
+    strncat(dbpath, home, (MAX - strlen(dbname) - 2));
+    strcat(dbpath, "/");
+    strcat(dbpath, dbname);
+    sprintf(command, "touch %s", dbpath);
+    system(command);
 
-  init_task_list(&task_list);
-  read_from_db(dbpath, &task_list);
+    init_task_list(&task_list);
+    read_from_db(dbpath, &task_list);
 
-  op = parse_command(argc, argv, command, MAX);
+    op = parse_command(argc, argv, command, MAX);
 
-  if (op) {
-    switch (op) {
-    case ADD:
-      add_task(&task_list, command);
-      break;
-    case LIST:
-      debug_print_task_list(&task_list);
-      break;
-    case DELETE:
-      if (strlen(command) == 0) {
-	int ch;
+    if (op) {
+	switch (op) {
+	case ADD:
+	    printf("Enter priority for this task (an integer between 0 to 100, default 5): ");
+	    scanf("%d", &priority);
+	    if (priority < 0 || priority > 100) priority = 5;
+	    add_task(&task_list, command, priority);
+	    break;
+	case LIST:
+	    debug_print_task_list(&task_list);
+	    break;
+	case DELETE:
+	    if (strlen(command) == 0) {
+		int ch;
 	
-	printf("Delete all tasks? (y/n) ");
-	ch = getchar();
+		printf("Delete all tasks? (y/n) ");
+		ch = getchar();
 
-	if (ch == 'y') {
-	  free_task_list(&task_list);
-	  init_task_list(&task_list);
+		if (ch == 'y') {
+		    free_task_list(&task_list);
+		    init_task_list(&task_list);
+		}
+	    }
+	    else {
+		puts("no implementation yet");
+	    }
+	    break;
 	}
-      }
-      else {
-	puts("no implementation yet");
-      }
-      break;
     }
-  }
   
-  write_to_db(dbpath, &task_list);
-  free_task_list(&task_list);
-  return EXIT_SUCCESS;
+    write_to_db(dbpath, &task_list);
+    free_task_list(&task_list);
+    return EXIT_SUCCESS;
 }

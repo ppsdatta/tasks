@@ -4,7 +4,11 @@ all : manager.o
 manager.o : manager.c
 	$(CC) -o manager.o -c manager.c
 
-.PHONY: clean
+
+.PHONY: clean tags
+
+tags :
+	ctags *.c
 
 clean :
 	rm -f *.o manager

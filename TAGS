@@ -1,0 +1,12 @@
+COMMAND	manager.c	/^enum COMMAND {$/
+Mmanager	manager.c	/^int main(int argc, char **argv)$/
+add_task	manager.c	/^int add_task(task_list_t *task_list, const char *n/
+debug_print_task_list	manager.c	/^void debug_print_task_list(task_list_t *task_list)/
+free_task_list	manager.c	/^void free_task_list(task_list_t *task_list)$/
+get_home_dir	manager.c	/^const char *get_home_dir(void)$/
+init_task_list	manager.c	/^int init_task_list(task_list_t *task_list)$/
+parse_command	manager.c	/^int parse_command(int argc, char **argv, char *par/
+read_from_db	manager.c	/^void read_from_db(const char *dbpath, task_list_t /
+task_list_t	manager.c	/^} task_list_t;$/
+task_t	manager.c	/^} task_t;$/
+write_to_db	manager.c	/^void write_to_db(const char *dbpath, task_list_t */
